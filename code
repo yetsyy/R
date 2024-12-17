@@ -1,0 +1,347 @@
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(data.table)
+
+#cargar las bases de datos
+rend_2022 <- fread("20230209_Rendimiento_2022_20230131_WEB.csv")
+rend_2023 <- fread("20240209_Rendimiento_2023_20240131_WEB.csv")
+matri_2024 <-  fread("20230802_Matrícula_Ed_Superior_2024_PUBL_MRUN.csv")
+
+#preparación base de dato rendimiento 2022
+#seleccionar sólo las columnas de interés
+rend_2022red <- rend_2022[, c("PROM_GRAL", "ASISTENCIA", "MRUN", "GEN_ALU", "COD_GRADO")]
+
+#cambiar a numérica la variable promedio general
+rend_2022red$PROM_GRAL <- as.numeric(sub(",", ".", rend_2022red$PROM_GRAL, fixed = TRUE))
+
+#eliminar los NA de MRUN
+rend_2022red <- rend_2022red[!is.na(rend_2022red$MRUN)]
+
+#Seleccionar sólo los alumnos de 8vo básico
+rend_2022red <- rend_2022red[rend_2022red$COD_GRADO == "8"]
+
+# Elimino casos con asistencia 0
+rend_2022red <- rend_2022red[rend_2022red$ASISTENCIA > 0, ]
+
+# Elimino casos con promedio 0
+rend_2022red <- rend_2022red[rend_2022red$PROM_GRAL > 0, ]
+
+# Elimino casos con género 0
+rend_2022red <- rend_2022red[rend_2022red$GEN_ALU > 0, ]
+
+#Liberar memoria
+rm(rend_2022)
+
+#########################################
+#Prepación base de datos rendimiento 2023
+#########################################
+
+#seleccionamos sólo lás variable de interes
+rend_2023red <- rend_2023[, c("PROM_GRAL", "ASISTENCIA", "MRUN", "GEN_ALU", "COD_ENSE", "COD_GRADO")]
+
+#selecionar sólo los alumnos de primero medio
+rend_2023red <- rend_2023red[rend_2023red$COD_ENSE == "310" & rend_2023red$COD_GRADO == "1"]
+
+#cambiar a número variable promedio general
+rend_2023red$PROM_GRAL <- as.numeric(sub(",", ".", rend_2023red$PROM_GRAL, fixed = TRUE))
+
+# Elimino casos con asistencia 0
+rend_2023red <- rend_2023red[rend_2023red$ASISTENCIA > 0, ]
+
+# Elimino casos con promedio 0
+rend_2023red <- rend_2023red[rend_2023red$PROM_GRAL > 0, ]
+
+# Elimino casos con género 0
+rend_2023red <- rend_2023red[rend_2023red$GEN_ALU > 0, ]
+
+#eliminar los NA de MRUN
+rend_2023red <- rend_2023red[!is.na(rend_2023red$MRUN)]
+
+#liberar memoria
+rm(rend_2023)
+
+##########################################
+#Calcular las medidas de tendencia central
+
+##########################################
+# a) Análisis exploratorio de las variables de las siguientes variables
+summary(rend_2022red$PROM_GRAL)
+summary(rend_2023red$PROM_GRAL)
+#al observar la mediana y el promedio, se puede indicar que existe un cambio en el rendimiento de los alumnos que pasan de curso de 
+#8vo básico a primero medio. El promedio varia en en 0.148 y la mediana en un 1 punto entre 5.9 y 5.8 en una escala
+#de calificaciones, donde 1 es la nota más baja y 7 la nota máxima
+
+#######################
+#Medidas de dispersión#
+#######################
+
+#calcular la varianza para promedio general 2022
+var(rend_2022red$PROM_GRAL, na.rm = TRUE) 
+#calcular la varianza para promedio general 2023
+var(rend_2023red$PROM_GRAL, na.rm = TRUE) 
+
+#La varianza de ambas variables indican que los datos estan relativamente concentrados al rededor de la media.
+#en el caso de la variable PROM_GRAL 2022 la varianza es de 0.3381179 y para PROM_GRAL 2023 corresponde a 0.4991261
+#esto indica que los datos no presentan mucha dispersión por lo que indicaria consistencia en los datos
+#el rendimiento de los estudiantes es bastante similar, ya que los datos se concentran al rededor de la media
+#se puede concluir que los datos varian poco.
+
+#calcular rangos intercuartilicos 2022
+rango_cuartilico_rend2022 <- IQR(rend_2022red$PROM_GRAL) # utilizando función IQR
+print(rango_cuartilico_rend2022)
+
+boxplot(rend_2022red$PROM_GRAL)
+
+#El rango intercuartilico para la variable PROM_GRAL 2022 1er cuartil 5.5 y 3er cuartil 6.3 lo cual indica que la mayoria
+#de los datos se agrupan en este rango.
+#La dispersión en la mitad central de los datos corresponde a 0.8
+
+#calcular rango intercuartilicos para PROM_GRAL 2023
+rango_cuartilico_rend2023 <- IQR(rend_2023red$PROM_GRAL) # utilizando función IQR
+print(rango_cuartilico_rend2023)
+boxplot(rend_2023red$PROM_GRAL)
+
+#El rango intercuartilico para la variable PROM_GRAL 2023; 1er cuartil 5.3 y 3er cuartil 6.3 lo cual indica que los datos
+#se agrupan mayormente en este rango
+#la dispersión en la mitad central de los datos corresponde a 1
+#en este caso el rango se disminuyó 0.2 decimas en comparación al año anterior, lo cual indica que el rendimiento decae en 0.2 decimas en general
+
+#B
+#graficar en histograma rendimiento 2022
+ggplot(data = rend_2022red) + geom_histogram(aes(x = PROM_GRAL, y = after_stat(density)),
+                                             bins = 30,
+                                             fill = "grey",
+                                             alpha = 0.9) +
+  labs(
+    title = "Distibución promedio general estudiantes 8vo básico 2022",
+    x = "Promedio general",
+    y = "Densidad"
+  ) +
+  theme_minimal()
+
+#graficar histograma 2023
+ggplot(data = rend_2023red) + geom_histogram(aes(x = PROM_GRAL, y = after_stat(density)),
+                                             bins = 30,
+                                             fill = "grey",
+                                             alpha = 0.9
+                                             ) +
+  labs(
+    title = "Distibución promedio general estudiantes primero medio 2023",
+    x = "Promedio general",
+    y = "Densidad"
+  ) 
+
+#graficar ambos histogramas para visualizar la diferencia
+ggplot() +
+  geom_histogram(data = rend_2022red, aes(x = PROM_GRAL, fill = "2022"), alpha = 0.5) +
+  geom_histogram(data = rend_2023red, aes(x = PROM_GRAL, fill = "2023"), alpha = 0.5) +
+  labs(
+    title = "Comparación distribución promedio general",
+    x = "Promedio General",
+    y = "Frecuencia", 
+    fill = "Año")
+#Al observar la superposición de ambas distribuciones, se puede concluir que la distribución de los datos del año 2023
+#se mueve más hacia la izquierda lo que sugiera una disminución leve en el rendimiento de los alumnos
+
+# B)
+#renombrar columnas para el rendimiento 2022
+rend_2022red <- rend_2022red %>% 
+  rename(PROM_GRAL_2022 = PROM_GRAL,
+         ASISTENCIA_2022 = ASISTENCIA)
+#renombrar columnas para el rendimiento 2023
+rend_2023red <- rend_2023red %>%
+  rename(PROM_GRAL_2023 = PROM_GRAL,
+         ASISTENCIA_2023 = ASISTENCIA)
+#unir ambos data frame mediante MRUN
+df <- merge(rend_2022red, rend_2023red, by = "MRUN", all = FALSE)
+
+#al unir ambos mediante MRUN ocurre que 39.278 estudiantes no se encuentran cursando en 2023
+#del total de los estudiantes que se encuentran registrados en el 2023 se encuentran cursando 222.180
+#sin embargo al realizar la unión de ambos df el total de estudiantes es de 210,363
+#por lo que hay 11.817 estudiantes nuevos en el 2023 que no estaban registrados en 2022
+
+#############
+#SEPARACIÓN SET DE ENTRENAMIENTO Y TESTEO #####
+###################################
+library("caret")
+set.seed(10851) #setear semilla
+
+#crear indice para para dividir los datos en entrenamiento y testeo
+indice <- createDataPartition(df$PROM_GRAL_2023, p = 0.7, list = FALSE)
+
+#Separar datos de entrenamiento y prueba
+entrenamiento <- df[indice,]
+testeo <- df[-indice,]
+
+#ajustar el modelo de regresión linear
+model <- lm(PROM_GRAL_2023 ~ PROM_GRAL_2022 + ASISTENCIA_2022 + GEN_ALU.y, 
+            data = entrenamiento)
+print(model)
+summary(model)
+
+#las variables predictoras son todas estadisticamente significativas
+#Los p-valores para PROM_GRAL_2022, ASISTENCIA_2022 y GEN_ALU.y son todos menores a 2e-16, 
+#lo que indica que estos coeficientes son estadísticamente significativos.
+
+#El RSE es 0.4614, lo que significa que la desviación estándar de los residuos es 0.4614. Esto indica que, 
+#en promedio, las predicciones del modelo se desvían de los valores observados en alrededor de 0.4614 unidades.
+
+#El estadístico F es 5.789e+04 con un p-valor menor a 2.2e-16, lo que sugiere que el modelo es altamente significativo.
+#La R-cuadrado es 0.5411, lo que indica que el modelo explica alrededor del 54% de la variabilidad en el rendimiento de 2023.
+#El p-valor para PROM_GRAL_2022 es muy bajo, lo que indica que esta variable es significativamente relevante para el modelo.
+
+#calcular MSE
+#el modelo arroja RSE
+
+rse <- 0.4614 #residual standar error
+mse <- 0.4614^2 # error cuadratico medio 
+print(mse) #valor del error cuadratico medio del conjunto de entrenamiento
+
+#C)
+#Calcular el error en el conjunto de testeo
+predicciones <- predict(model, newdata = testeo)
+print(predicciones)
+mse_testeo <- mean((testeo$PROM_GRAL_2023 - predicciones)^2)
+print(mse_testeo)
+
+rmse_testeo <- sqrt(mse_testeo)
+print(rmse_testeo)
+
+#Evaluar la capacidad de generalización del modelo
+#el error cuadratico medio, tanto para el entrenamiento como para el conjunto de datos de testeo es bastante similar,
+#lo que sugiere que el modelo tiene buen poder de generalización.
+#El hecho de que el modelo tenga casi el mismo error en los datos de testeo que en los datos 
+#de entrenamiento indica que no presenta overfitting o underfitting, por lo que la diferencia entre los datos de 
+#entrenamiento y testeo no es significativa.
+
+#Predicción sobre un Nuevo Alumno:
+#La diferencia entre el MSE en testeo (0.2110481) y el RSE en entrenamiento (0.4614) es bastante pequeña, por lo que podemos 
+#concluir que el modelo tiene un buen rendimiento no solo en los datos de testeo, sino también al generalizar para 
+#nuevos casos.
+#En cuanto al error esperado al aplicar el modelo a un alumno que no está en la base de datos, sería razonable esperar 
+#un error similar al RMSE de testeo, que es 0.459. Es decir, se espera que la predicción esté equivocada en 
+#aproximadamente 0.459 unidades en promedio.
+
+#################
+### Problema 2####
+#################
+
+rend_2023 <- fread("20240209_Rendimiento_2023_20240131_WEB.csv")
+
+rend_2023_p2 <- rend_2023[, c("GEN_ALU", "EDAD_ALU", "PROM_GRAL", "ASISTENCIA", "COD_REG_RBD", "RURAL_RBD", "MRUN")]
+rm(rend_2023)
+
+#cambiar a tipo numerica varibale PROM_GRAl
+rend_2023_p2$PROM_GRAL <- as.numeric(sub(",", ".", rend_2023_p2$PROM_GRAL, fixed = TRUE))
+
+#seleccionar sólo los alumnos de la Región de Los Lagos
+rend_2023_p2 <- rend_2023_p2[rend_2023_p2$COD_REG_RBD == "10"] #corresponde al codigo de Region de los Lagos
+
+##eliminar los NA de MRUN
+rend_2023_p2 <- rend_2023_p2[!is.na(rend_2023_p2$MRUN)]
+
+# Elimino casos con asistencia 0
+rend_2023_p2 <- rend_2023_p2[rend_2023_p2$ASISTENCIA > 0, ]
+
+# Elimino casos con promedio 0
+rend_2023_p2 <- rend_2023_p2[rend_2023_p2$PROM_GRAL > 0, ]
+
+# Elimino casos con género 0
+rend_2023_p2 <- rend_2023_p2[rend_2023_p2$GEN_ALU > 0, ]
+
+#seleccionar solo a estudiantes rurales
+rend_2023_p2 <- rend_2023_p2[rend_2023_p2$RURAL_RBD == "1"]
+
+# A) El numero de estudiante total 3.584.330 y sólo los alumnos de la region de la lagos de zona rural corresponde a 26.950
+#lo cual representa 0.752%
+
+#BBDD 2024
+matri_2024red <- matri_2024[, c("area_conocimiento", "mrun")]
+matri_2024red$cb_dummy <- ifelse(matri_2024red$area_conocimiento == "Ciencias Básicas", 1, 0)
+table(matri_2024red$cb_dummy) # 29634 estudiantes estudian ciencias básicas
+
+#cambiar a mayúscula los nombres de las columnas
+colnames(matri_2024red) <- toupper(colnames(matri_2024red))
+
+#convertir a factor variable CB_DUMMY
+matri_2024red$CB_DUMMY <- factor(matri_2024red$CB_DUMMY, levels = c(0, 1))
+
+##eliminar los NA de MRUN
+matri_2024red <- matri_2024red[!is.na(matri_2024red$MRUN)]
+
+#Unir ambos data frame
+df_p2 <- merge(rend_2023_p2, matri_2024red, by = "MRUN", all = FALSE)
+
+#cambiar tipo de dato variable PROM_GRAL
+df_p2$PROM_GRAL <- as.numeric(sub(",", ".", df_p2$PROM_GRAL, fixed = TRUE))
+
+#renombrar columna ciencias
+df_p2 <- df_p2 %>% rename(CIENCIAS = CB_DUMMY)
+
+########################################
+###Separación entrenamiento y testeo####
+########################################
+
+set.seed(10851)
+indice <- createDataPartition(df_p2$CIENCIAS, p = .8, list = FALSE)
+
+#seprar datos de entrenamiento y testeo
+entrenamiento <- df_p2[indice,]
+testeo <- df_p2[-indice,]
+
+#ajustar el  modelo
+modelo <- train(CIENCIAS ~ GEN_ALU + EDAD_ALU + PROM_GRAL + ASISTENCIA,
+                data = entrenamiento,
+                method = "glm",
+                family = binomial())
+summary(modelo)
+#las variables estadisticamente significativas son GEN_ALU y PROM_GRAL y tienen un impacto en la probabilidad de cursar
+#ciencias básicas
+#GEN_ALU (p = 0.0426) y PROM_GRAL (p = 0.0114) son estadísticamente significativos (p < 0.05).
+#El modelo muestra una devianza de 78.022 a 66.318, lo que indica que las variables explicativas mejoran el ajuste,
+#sin embargo, es necesario calcular otras metricas como entropia binaria y entropia binaria cruzada para determinar
+#qué tan bien puede generalizar el modelo a partir de datos nuevos
+
+# B) calcular entropia binaria
+entropia_binaria = function(u,v){
+  u = as.character(u)
+  entropia = ifelse(u=="1", -log(v), -log(1-v))
+}
+
+prob_entrenamiento <- predict(modelo, newdata = entrenamiento, type="prob")
+Ein = rep(0,times=nrow(entrenamiento))
+for(i in 1:length(prob_train[,2])){ Ein[i] = entropia_binaria(entrenamiento$CIENCIAS[i], prob_train[i,2]) }
+
+Ein = mean(Ein)
+
+Ein #error dentro de la muestra
+
+Ein * 2 * length(entrenamiento$CIENCIAS) 
+
+#calcular el error fuera de la muestra
+#calcular las probabilidades predidas del conjunto de dato de testeo
+prob_test <- predict(modelo, newdata = testeo, type = "prob")
+
+y <- testeo$CIENCIAS
+
+entropia_cruzada_binaria <- function(y, p) {
+  y <- as.numeric(as.character(y)) 
+  -mean(y * log(p) + (1 - y) * log(1 - p))
+}
+
+# Calcular entropía cruzada binaria para el conjunto de testeo
+error_testeo <- entropia_cruzada_binaria(testeo$CIENCIAS, prob_test[, 2])
+error_testeo  # el resultado sugiere que el modelo tiene buen nivel de predicción, ya que el resultado 0.0456
+# es cercano al cero. Además, el error fuera de la muestra es mas bajo que dentro de la muestra 
+#por lo que sugiere que el modelo tiene buena capacidad para predecir datos que no fueron utilizados en el entrenamiento
+#también indica que el modelo no está sobreajustado.
+#En resumen, el modelo predice la probabilidad de que un estudiante pertenezca a la categoria "Ciencias Básicas"
+#con un error promedio de 0.0456 en datos fuera de la muestra. Esto indica una buena capacidad de generalización,
+# por lo que, un estudiante que no esté en la base de datos, el modelo cometeria un error promedio similar al obtenido
+#en el conjunto de testeo. Por lo tanto, es un modelo confiable para predecir la probabilidad de ingresar a estudiar
+#ciencias básicas.
+
+
+
+
